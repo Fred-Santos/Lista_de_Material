@@ -1,0 +1,2 @@
+Erro: Item com Tamanho Maior que o Limite: Item: TUBO, AÇO CARBONO, API 5L Gr. B, DN 4”, SCH.40 com TAG: DE-0010 tem comprimento de 7.3m, maior que o limite de 5.9m. Linha: 25
+Erro: Campo Nulo ou Vazio no Material: Campo 'Material' nulo ou vazio encontrado para TAG: DE-0015. Linha: 10
