@@ -1,0 +1,144 @@
+# Documentação do Código
+
+Este documento detalha o funcionamento do código fornecido, que realiza diversas operações sobre uma planilha Excel, verificando restrições, agrupando dados e gerando novas abas com informações processadas. O código também utiliza interfaces gráficas para interação com o usuário e registra mensagens de erro em um arquivo de log.
+
+---
+
+## **Descrição Geral**
+
+O objetivo do código é processar dados contidos em uma planilha Excel e gerar informações detalhadas organizadas em duas novas abas: "Plano de Corte" e "Agrupamento". Além disso, o código verifica restrições, destaca possíveis problemas e registra mensagens de erro em um arquivo de log.
+
+---
+
+## **Bibliotecas Utilizadas**
+- **pandas**: Para manipulação e análise dos dados tabulares.
+- **openpyxl**: Para leitura, escrita e manipulação de arquivos Excel.
+- **tkinter**: Para criar janelas de seleção de arquivos e exibir mensagens ao usuário.
+- **os**: Para manipulação de caminhos de arquivos e diretórios.
+
+---
+
+## **Fluxo do Código**
+
+### **1. Seleção do Arquivo**
+A função `selecionar_arquivo()` utiliza a biblioteca **Tkinter** para abrir uma janela de seleção de arquivos, onde o usuário pode selecionar o arquivo Excel de origem com extensão `.xlsx`. Caso nenhum arquivo seja selecionado, o programa é encerrado.
+
+```python
+def selecionar_arquivo():
+    Tk().withdraw()
+    caminho_arquivo = filedialog.askopenfilename(title="Selecione o arquivo Excel", filetypes=[("Arquivos Excel", "*.xlsx")])
+    return caminho_arquivo
+```
+
+### **2. Carregamento do Arquivo**
+Os dados são lidos utilizando o **pandas** da aba chamada "Lista", ignorando a primeira linha (títulos personalizados). As colunas de interesse são filtradas: `Material`, `Quant.`, `Dimensão`, `Unid. Medida` e `TAG DO CONJUNTO`.
+
+```python
+caminho_arquivo = selecionar_arquivo()
+dataset = pd.read_excel(caminho_arquivo, sheet_name="Lista", skiprows=1)
+df = dataset[['Material', 'Quant.', 'Dimensão', 'Unid. Medida', 'TAG DO CONJUNTO']]
+```
+
+---
+
+### **3. Verificações e Log de Erros**
+Um arquivo de log é criado para registrar mensagens de erro relacionadas a:
+
+#### **3.1. Itens com Dimensão Maior que o Limite**
+O código verifica se existem itens cuja dimensão excede o valor `comprimento_maximo` (definido como 5.9 metros). Caso encontrados, os itens são destacados em uma mensagem para o usuário e registrados no log.
+
+#### **3.2. Campos Nulos ou Vazios**
+Itens com valores nulos ou vazios na coluna `Material` são identificados, mas apenas quando há valores preenchidos na coluna `Quant.`.
+
+```python
+df_maior_que_maximo = df[df['Dimensão'] > comprimento_maximo]
+# Registro no log...
+df_nulos_material = df[df['Quant.'].notnull() & (df['Material'].isnull() | (df['Material'].str.strip() == ''))]
+# Registro no log...
+```
+
+---
+
+### **4. Processamento e Agrupamento de Dados**
+
+#### **4.1. Organização por Peças**
+Os itens com unidade de medida em metros (`Unid. Medida == 'm'`) são organizados em "peças" de comprimento máximo definido (`comprimento_maximo`).
+
+- Os itens são agrupados por `Material`.
+- Dentro de cada grupo, os itens são alocados em peças de forma a não exceder o limite.
+
+```python
+def agrupar_itens_por_material(df, comprimento_maximo):
+    resultado = []
+    for material, grupo in df.groupby('Material'):
+        grupo = grupo.sort_values(by='Dimensão', ascending=False)
+        pecas = []
+        # Lógica para alocação...
+    return resultado
+```
+
+#### **4.2. Consolidação das Peças**
+Cada peça é consolidada em um resumo que lista os itens, suas dimensões, quantidades e TAGs.
+
+```python
+def consolidar_peca(peca):
+    consolidado = {}
+    for item in peca:
+        chave = (item['Material'], item['Dimensão'], item['TAG DO CONJUNTO'])
+        consolidado[chave] = consolidado.get(chave, 0) + 1
+    return consolidado
+```
+
+---
+
+### **5. Criação das Abas no Excel**
+
+#### **5.1. Aba "Plano de Corte"**
+Uma nova aba é criada para exibir o agrupamento de itens por material e suas respectivas peças. Cada peça mostra:
+- Comprimento total.
+- Itens incluídos na peça (Material, Dimensão, TAG e Quantidade).
+
+```python
+if "Plano de Corte" not in wb_original.sheetnames:
+    wb_original.create_sheet("Plano de Corte")
+sheet = wb_original["Plano de Corte"]
+# Adicionar dados...
+```
+
+#### **5.2. Aba "Agrupamento"**
+Os dados agrupados por `Material` e `Dimensão` são exibidos nesta aba, com os valores de `Dimensão` convertidos para milímetros e ordenados de forma decrescente.
+
+```python
+if "Agrupamento" not in wb_original.sheetnames:
+    wb_original.create_sheet("Agrupamento")
+agrupamento_sheet = wb_original["Agrupamento"]
+# Adicionar dados...
+```
+
+---
+
+### **6. Salvamento do Arquivo**
+O arquivo original é salvo com um novo nome que inclui o sufixo `_otimizada`. O arquivo de log também é salvo no mesmo diretório do arquivo original.
+
+```python
+nome_otimizado = f"{os.path.splitext(os.path.basename(caminho_arquivo))[0]}_otimizada.xlsx"
+caminho_otimizado = os.path.join(diretorio, nome_otimizado)
+wb_original.save(caminho_otimizado)
+```
+
+---
+
+## **Mensagens ao Usuário**
+O código utiliza caixas de diálogo para:
+1. Exibir erros detectados durante o processamento.
+2. Informar o local onde o arquivo de log foi salvo.
+
+```python
+messagebox.showinfo("Arquivo de Log", f"O arquivo de log foi gerado: {caminho_log}")
+```
+
+---
+
+## **Conclusão**
+Este script fornece uma solução completa para o processamento de planilhas Excel relacionadas à organização de materiais e otimização de cortes, com verificações automatizadas e geração de relatórios detalhados. As mensagens de erro e os relatórios são documentados de forma clara, permitindo ao usuário identificar e corrigir problemas com facilidade.
+
